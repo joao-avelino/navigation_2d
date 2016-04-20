@@ -94,6 +94,8 @@ private:
 	 */
 	inline sensor_msgs::PointCloud* getPointCloud(double direction, double velocity);
 
+    void cmdWatchDogCB(const ros::TimerEvent& e);
+
 	// Internal Storage
 	costmap_2d::Costmap2DROS* mLocalMap;
 	costmap_2d::Costmap2D* mCostmap;
@@ -124,11 +126,18 @@ private:
 	int mSafetyWeight;
 	int mConformanceWeight;
 	int mContinueWeight;
+    double mMaxNoCmdTime;
 
 	std::string mOdometryFrame;
 	std::string mRobotFrame;
 	
 	unsigned int mRecoverySteps;
+
+    //A simple watchdog to stop the robot if no information is received in a couple seconds
+    ros::Timer cmdWatchDog;
+    bool hold;
+    bool did_once;
+
 };
 
 #endif

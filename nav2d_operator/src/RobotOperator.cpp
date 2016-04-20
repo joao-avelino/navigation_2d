@@ -35,6 +35,7 @@ RobotOperator::RobotOperator()
 	operatorNode.param("conformance_weight", mConformanceWeight, 1);
 	operatorNode.param("continue_weight", mContinueWeight, 1);
 	operatorNode.param("max_velocity", mMaxVelocity, 1.0);
+    operatorNode.param("max_no_cmd_time", mMaxNoCmdTime, 3.0); //In seconds
 
 	// Apply tf_prefix to all used frame-id's
 	mRobotFrame = mTfListener.resolve(mRobotFrame);
@@ -52,6 +53,12 @@ RobotOperator::RobotOperator()
 	mCurrentVelocity = 0;
 	mDriveMode = 0;
 	mRecoverySteps = 0;
+
+    //Construct watchdog
+    cmdWatchDog = operatorNode.createTimer(ros::Duration(mMaxNoCmdTime), &RobotOperator::cmdWatchDogCB, this);
+    cmdWatchDog.start();
+    hold = false;
+    did_once = false;
 }
 
 RobotOperator::~RobotOperator()
@@ -179,6 +186,18 @@ void RobotOperator::initTrajTable()
 	}	
 }
 
+void RobotOperator::cmdWatchDogCB(const ros::TimerEvent& e)
+{
+    mDesiredDirection = 0;
+    mDesiredVelocity = 0;
+    mCurrentDirection = 0;
+    mCurrentVelocity = 0;
+
+
+    hold = true;
+
+}
+
 void RobotOperator::receiveCommand(const nav2d_operator::cmd::ConstPtr& msg)
 {
 	if(msg->Turn < -1 || msg->Turn > 1)
@@ -190,15 +209,25 @@ void RobotOperator::receiveCommand(const nav2d_operator::cmd::ConstPtr& msg)
 		mCurrentDirection = 0;
 		mCurrentVelocity = 0;
 		ROS_ERROR("Invalid turn direction on topic '%s'!", COMMAND_TOPIC);
+
 		return;
 	}
+
 	mDesiredDirection = msg->Turn;
 	mDesiredVelocity = msg->Velocity * mMaxVelocity;
 	mDriveMode = msg->Mode;
+
+    //We received the command. Reset the watchdog
+    cmdWatchDog.stop();
+    cmdWatchDog.start();
+    hold = false;
+    did_once = false;
 }
 
 void RobotOperator::executeCommand()
 {
+
+    if(did_once == false){
 	// 1. Get a copy of the costmap to work on.
 	mCostmap = mLocalMap->getCostmap();
     boost::unique_lock<costmap_2d::Costmap2D::mutex_t> lock(*(mCostmap->getMutex()));
@@ -286,9 +315,11 @@ void RobotOperator::executeCommand()
 			route_msg.cells[i].y = transformedCloud.points[i].y;
 			route_msg.cells[i].z = transformedCloud.points[i].z;
 		}
-		mTrajectoryPublisher.publish(route_msg);
+        mTrajectoryPublisher.publish(route_msg);
 	
 		// Publish plan via ROS (mainly for debugging)
+
+
 		sensor_msgs::PointCloud* originalPlanCloud = getPointCloud(mDesiredDirection, mDesiredVelocity);
 		sensor_msgs::PointCloud transformedPlanCloud;
 
@@ -315,7 +346,10 @@ void RobotOperator::executeCommand()
 			plan_msg.cells[i].y = transformedPlanCloud.points[i].y;
 			plan_msg.cells[i].z = transformedPlanCloud.points[i].z;
 		}
+
+
 		mPlanPublisher.publish(plan_msg);
+
 	}
 	
 	// Publish result via Twist-Message
@@ -359,6 +393,12 @@ void RobotOperator::executeCommand()
 		controlMsg.angular.z = -1.0 / r * controlMsg.linear.x;
 	}
 	mControlPublisher.publish(controlMsg);
+    if(hold == true)
+    {
+      ROS_ERROR_STREAM("No commands received in the last " << mMaxNoCmdTime << "seconds. Stopping the robot for security reasons. (No robots shall escape!)");
+      did_once = true;
+    }
+    }
 }
 
 int RobotOperator::calculateFreeSpace(sensor_msgs::PointCloud* cloud)
