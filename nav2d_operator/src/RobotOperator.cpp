@@ -395,7 +395,7 @@ void RobotOperator::executeCommand()
 	mControlPublisher.publish(controlMsg);
     if(hold == true)
     {
-      ROS_ERROR_STREAM("No commands received in the last " << mMaxNoCmdTime << "seconds. Stopping the robot for security reasons. (No robots shall escape!)");
+      ROS_INFO_STREAM("No commands received in the last " << mMaxNoCmdTime << "seconds. Stopping the robot for security reasons. (No robots shall escape!)");
       did_once = true;
     }
     }
