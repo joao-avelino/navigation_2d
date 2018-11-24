@@ -12,6 +12,8 @@
 #include <costmap_2d/costmap_2d_ros.h>
 #include <sensor_msgs/PointCloud.h>
 #include <nav2d_operator/cmd.h>
+#include <tf/transform_listener.h>
+#include <tf2_ros/transform_listener.h>
 
 #include <string>
 
@@ -102,6 +104,8 @@ private:
 	double mRasterSize;
 	
 	tf::TransformListener mTfListener;
+	tf2_ros::Buffer mTf2Buffer;
+	tf2_ros::TransformListener mTf2Listener;
 	
 	ros::Subscriber mCommandSubscriber;
 	ros::Publisher mControlPublisher;
@@ -122,11 +126,11 @@ private:
 	bool mPublishRoute;
 	double mMaxFreeSpace;
 	double mSafetyDecay;
-	int mDistanceWeight;
 	int mSafetyWeight;
 	int mConformanceWeight;
 	int mContinueWeight;
-    double mMaxNoCmdTime;
+        double mMaxNoCmdTime;
+	int mEscapeWeight;
 
 	std::string mOdometryFrame;
 	std::string mRobotFrame;
