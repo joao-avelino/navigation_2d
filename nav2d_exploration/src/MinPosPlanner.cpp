@@ -115,7 +115,7 @@ int MinPosPlanner::findExplorationTarget(GridMap* map, unsigned int start, unsig
 	if(mVisualizeFrontiers)
 	{
 		visualization_msgs::Marker marker;
-		marker.header.frame_id = "/map";
+		marker.header.frame_id = "map";
 		marker.header.stamp = ros::Time();
 		marker.id = 0;
 		marker.type = visualization_msgs::Marker::CUBE_LIST;

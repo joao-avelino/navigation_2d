@@ -202,7 +202,7 @@ bool RobotNavigator::createPlan()
 	if(mCurrentMap.getCoordinates(goal_x,goal_y,mGoalPoint))
 	{
 		visualization_msgs::Marker marker;
-		marker.header.frame_id = "/map";
+		marker.header.frame_id = "map";
 		marker.header.stamp = ros::Time();
 		marker.id = 0;
 		marker.type = visualization_msgs::Marker::CYLINDER;
